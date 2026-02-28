@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PC GAMES ON MOBILE</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        
+        @keyframes rotateNeon { to { --angle: 360deg; } }
+        @keyframes iosPop {
+            0% { opacity: 0; transform: scale(0.8) translateY(60px); filter: blur(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
+        @keyframes drift {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(100px, 150px); }
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes notifyIn {
+            0% { transform: translateY(100px) scale(0.9); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        body { background: #050508; color: #fff; font-family: 'SF Pro Display', -apple-system, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+
+        /* ФОН ЖИДКОЕ СТЕКЛО */
+        .liquid-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #08080c; z-index: -2; overflow: hidden; }
+        .neon-blob { position: absolute; width: 350px; height: 350px; border-radius: 50%; filter: blur(90px); opacity: 0.15; animation: drift 25s infinite linear; }
+        .blob-purple { background: #7000ff; top: 10%; left: 10%; }
+        .blob-pink { background: #ff0055; bottom: 20%; right: 10%; animation-delay: -5s; }
+        .blob-blue { background: #00d4ff; top: 40%; left: 50%; animation-delay: -10s; }
+        .glass-overlay { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.01); backdrop-filter: blur(60px); z-index: -1; }
+
+        /* УВЕДОМЛЕНИЯ */
+        #notification-container { position: fixed; bottom: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; pointer-events: none; }
+        .toast { padding: 12px 24px; background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 50px; color: #fff; font-size: 13px; font-weight: 600; animation: notifyIn 0.5s cubic-bezier(0.2, 1, 0.2, 1) forwards; display: flex; align-items: center; gap: 10px; }
+        .toast-icon { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* НЕОНОВЫЕ ГРАНИЦЫ (ТУСКЛЫЕ 0.25) */
+        .neon-border { position: relative; padding: 1.5px; border-radius: 28px; display: inline-flex; }
+        .neon-border::before { content: ''; position: absolute; inset: 0; padding: 1.5px; border-radius: inherit; background: conic-gradient(from var(--angle), transparent, #7000ff, #ff0055, transparent); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; animation: rotateNeon 4s linear infinite; opacity: 0.25; transition: opacity 0.8s; }
+
+        header { margin: 20px 0; z-index: 1001; }
+        header.neon-border::before { opacity: 1; border-radius: 13px; }
+        .header-glass { padding: 6px 12px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        header h1 { font-size: 0.85rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; line-height: 1; }
+
+        /* ПОИСК */
+        .nav-container { width: 100%; max-width: 380px; padding: 0 20px; margin-bottom: 35px; z-index: 1000; position: relative; }
+        .nav-neon { width: 100%; border-radius: 30px; display: block; }
+        .nav-glass { display: flex; align-items: center; background: rgba(255, 255, 255, 0.03); border-radius: 30px; padding: 0 8px 0 22px; backdrop-filter: blur(30px); height: 58px; position: relative; z-index: 2; border: 1px solid rgba(255,255,255,0.05); }
+        #gameSearch { flex: 1; background: transparent; border: none; color: #fff; outline: none; font-size: 16px; height: 100%; }
+        .clear-btn { width: 26px; height: 26px; background: #ff0055; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer; margin-right: 10px; font-size: 18px; color: #fff; }
+
+        /* ШЕСТЕРНЯ */
+        .settings-btn { width: 42px; height: 42px; background: rgba(255,255,255,0.08); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.5s; z-index: 1001; }
+        .settings-btn svg { width: 22px; height: 22px; fill: #fff; transition: 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .settings-btn.active { background: #ff0055; transform: rotate(180deg); box-shadow: 0 0 15px rgba(255, 0, 85, 0.5); }
+
+        .dropdown-menu { position: absolute; top: 65px; left: 20px; right: 20px; background: rgba(10, 10, 15, 0.98); backdrop-filter: blur(50px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); opacity: 0; visibility: hidden; transform: translateY(-15px); transition: 0.5s; z-index: 999; }
+        .dropdown-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .menu-item { color: #fff; padding: 18px; text-align: center; font-weight: 800; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        /* КАРТОЧКИ */
+        .games-grid { display: flex; flex-direction: column; width: 100%; max-width: 400px; gap: 35px; padding: 0 20px 100px; }
+        .card-wrapper { opacity: 0; cursor: pointer; width: 100%; display: flex; border-radius: 28px; position: relative; user-select: none; }
+        .game-card { width: 100%; background: rgba(255, 255, 255, 0.02); border-radius: 28px; backdrop-filter: blur(15px); overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.03); transition: 0.8s; }
+        
+        .card-wrapper.active-glow::before { opacity: 0.8 !important; }
+        .card-wrapper.active-glow img { filter: brightness(1.1) !important; }
+
+        .animate-pop { animation: iosPop 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .card-hidden { display: none !important; }
+        .game-img { width: 100%; height: 190px; padding: 12px; overflow: hidden; pointer-events: none; }
+        .game-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 18px; filter: brightness(0.6); transition: 0.8s; }
+        .game-info { padding: 0 25px 25px; text-align: center; }
+        .game-title { font-size: 1.3rem; font-weight: 900; color: #fff; margin-bottom: 18px; display: block; }
+        
+        .download-btn { width: 100%; height: 55px; border-radius: 50px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-weight: 900; text-transform: uppercase; cursor: pointer; position: relative; overflow: hidden; }
+        .progress-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: linear-gradient(90deg, #7000ff, #ff0055); transition: width 0.4s; }
+        .btn-text { position: relative; z-index: 2; font-size: 11px; }
+
+        .card-wrapper:nth-child(1) { animation-delay: 0.1s; }
+        .card-wrapper:nth-child(2) { animation-delay: 0.2s; }
+        .card-wrapper:nth-child(3) { animation-delay: 0.3s; }
+    </style>
+</head>
+<body onclick="closeMenu(event)">
+<div id="notification-container"></div>
+<div class="liquid-bg">
+    <div class="neon-blob blob-purple"></div>
+    <div class="neon-blob blob-pink"></div>
+    <div class="neon-blob blob-blue"></div>
+    <div class="glass-overlay"></div>
+</div>
+
+<header class="neon-border"><div class="header-glass"><h1>PC GAMES ON MOBILE</h1></div></header>
+
+<div class="nav-container">
+    <div class="nav-neon neon-border">
+        <div class="nav-glass">
+            <input type="text" id="gameSearch" placeholder="Поиск игр..." oninput="updateSearch()">
+            <div class="clear-btn" id="clearSearch" onclick="clearField()">×</div>
+            <div class="settings-btn" id="menuBtn" onclick="toggleMenu(event)">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12-.22.37-.29.59-.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            </div>
+        </div>
+    </div>
+    <div class="dropdown-menu" id="dropdownMenu">
+        <div class="menu-item">КАТЕГОРИИ</div>
+        <div class="menu-item">ПОПУЛЯРНОЕ</div>
+    </div>
+</div>
+
+<div class="games-grid" id="gamesGrid">
+    <div class="card-wrapper neon-border animate-pop" data-name="forza horizon 5">
+        <div class="game-card">
+            <div class="game-img"><img src="img/forzahorizon.jpg"></div>
+            <div class="game-info"><span class="game-title">Forza Horizon 5</span><button class="download-btn" onclick="startDownload(this, event, 'Forza Horizon 5')"><div class="progress-fill"></div><span class="btn-text">Скачать</span></button></div>
+        </div>
+    </div>
+    <div class="card-wrapper neon-border animate-pop" data-name="days gone">
+        <div class="game-card">
+            <div class="game-img"><img src="img/daysgone.jpg"></div>
+            <div class="game-info"><span class="game-title">Days Gone</span><button class="download-btn" onclick="startDownload(this, event, 'Days Gone')"><div class="progress-fill"></div><span class="btn-text">Скачать</span></button></div>
+        </div>
+    </div>
+    <div class="card-wrapper neon-border animate-pop" data-name="cyberpunk 2077">
+        <div class="game-card">
+            <div class="game-img"><img src="img/cyberpunk.jpg"></div>
+            <div class="game-info"><span class="game-title">Cyberpunk 2077</span><button class="download-btn" onclick="startDownload(this, event, 'Cyberpunk 2077')"><div class="progress-fill"></div><span class="btn-text">Скачать</span></button></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function vibrate(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
+
+    function showNotify(text, type = 'info') {
+        const container = document.getElementById('notification-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        const color = type === 'done' ? '#00ff88' : '#ff0055';
+        toast.innerHTML = `<div class="toast-icon" style="background:${color}; box-shadow: 0 0 10px ${color}"></div>${text}`;
+        container.appendChild(toast);
+        vibrate(40);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px) scale(0.9)';
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
+    }
+
+    function updateSearch() {
+        const q = document.getElementById('gameSearch').value.toLowerCase();
+        const clearBtn = document.getElementById('clearSearch');
+        clearBtn.style.display = q ? 'flex' : 'none';
+        if (q.length > 0) vibrate(10);
+        document.querySelectorAll('.card-wrapper').forEach(w => {
+            w.classList.remove('animate-pop');
+            void w.offsetWidth; 
+            if (w.getAttribute('data-name').includes(q)) {
+                w.classList.remove('card-hidden');
+                w.classList.add('animate-pop');
+            } else { w.classList.add('card-hidden'); }
+        });
+    }
+
+    function clearField() { vibrate(30); document.getElementById('gameSearch').value = ''; updateSearch(); }
+
+    function toggleMenu(e) {
+        e.stopPropagation();
+        vibrate(25);
+        document.getElementById('menuBtn').classList.toggle('active');
+        document.getElementById('dropdownMenu').classList.toggle('active');
+    }
+
+    function closeMenu(e) {
+        const menu = document.getElementById('dropdownMenu'), btn = document.getElementById('menuBtn');
+        if (!menu.contains(e.target) && !btn.contains(e.target)) {
+            if (menu.classList.contains('active')) vibrate(15);
+            menu.classList.remove('active');
+            btn.classList.remove('active');
+        }
+    }
+
+    function triggerGlow(el) {
+        if (el.classList.contains('active-glow')) return;
+        vibrate(50);
+        el.classList.add('active-glow');
+        setTimeout(() => el.classList.remove('active-glow'), 3000);
+    }
+
+    function startDownload(btn, e, title) {
+        e.stopPropagation();
+        if (btn.classList.contains('processing')) return;
+        vibrate([50, 30, 50]); 
+        btn.classList.add('processing');
+        showNotify(`Загрузка ${title}...`);
+        let p = 0;
+        const fill = btn.querySelector('.progress-fill'), txt = btn.querySelector('.btn-text');
+        const inv = setInterval(() => {
+            p += Math.floor(Math.random() * 8) + 2;
+            if(p >= 100) { 
+                p = 100; clearInterval(inv); txt.innerText = 'ГОТОВО'; 
+                vibrate(200); 
+                showNotify(`${title} установлена!`, 'done');
+                btn.style.boxShadow = "0 0 20px rgba(0, 255, 136, 0.4)";
+            }
+            else txt.innerText = p + '%';
+            fill.style.width = p + '%';
+        }, 120);
+    }
+
+    document.querySelectorAll('.card-wrapper').forEach(card => {
+        let pt;
+        card.addEventListener('mouseenter', () => triggerGlow(card));
+        card.addEventListener('touchstart', () => { pt = window.setTimeout(() => triggerGlow(card), 400); }, {passive: true});
+        card.addEventListener('touchend', () => clearTimeout(pt));
+    });
+</script>
+</body>
+</html>
